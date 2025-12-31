@@ -9,18 +9,24 @@ public.get("/metar/:icaoV", async (req, res) => {
     
     let icao = req.params.icaoV.toUpperCase();
     if (icao === 'KABC') {
-        let metars = require('../../metars.js');
-        let dummy = metars.find(item => item.icaoId === 'KABC');
+        let source = require('../metars.js');
+        console.log('you made it this far');
+        let { page_values } = source;
+        console.log('turning the corner a page_values definition');
+        let dummy = page_values.find(item => item.icao === 'ABC');
+        console.log('here is your dummy: ' + dummy);
+
         return res.status(200).json(dummy);
     }
     else {
         let current = await fetchMetar(icao);
-        if (current && current.icaoId) {
+        if (current && current.icao) {
             return res.json(current);
         }
         else {
-            let metars = require('../../metars.js');
-            let dummy = metars.find(item => item.icaoId === 'KABC');
+            let source = require('../metars.js');
+            let { page_values } = source;           
+            let dummy = page_values.find(item => item.icaoId === icao);
             return res.status(404).json(dummy);    
         }
     }

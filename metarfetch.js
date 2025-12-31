@@ -1,4 +1,5 @@
-const metars = require('./metars.js');
+const { metars, page_values } = require('./src/metars.js');
+const { gamut } = require('./src/slicer.js');
 
 async function fetchMetar(icaoV) {
   const url = `https://aviationweather.gov/api/data/metar?ids=${icaoV}&format=json`;
@@ -12,12 +13,13 @@ async function fetchMetar(icaoV) {
     if (data.length > 0) {
         console.log('METAR found pushing to local repository');
         metars.push(data[0]);
-        return data[0];
+        let pagevalues = gamut(data[0]);
+        page_values.push(pagevalues);
+        return pagevalues;
     }
     else {
-        console.log('METAR not retrieved for ' + icao);
-        let altdata = metars.find(item => item.icaoId === icao);
-        return altdata;
+        console.log('METAR not retrieved for ' + icaoV);
+        return null;
     }
 
   } catch (error) {
