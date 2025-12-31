@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import menuData from './data.js';
 import './App.css';
-import { page_values } from './metars.js';
+import { page_values, aptdb } from './metars.js';
 
 
 
@@ -12,23 +12,38 @@ function App() {
   const [metarData, setMetarData] = useState(null); 
   const [userInput, setUserInput] = useState(''); 
   const [icaoV, setIcaoV] = useState('KABC'); 
-  //const [cao, setCao] = useState('##:##');
-  //const [tempCn, setTempCn] = useState(0);
-  //const [tempD, setTempD] = useState('');
   const [tempT, setTempT] = useState('F'); 
-  //const [dPoint, setDPoint] = useState(0);
-  //const [dpRef, setDpRef] = useState(0);
+  const [rwys, setRwys] = useState([]);
   
   useEffect(() => {
     const fetchdata = async () => {
+      
       try{
         const rawdata = await fetch(`/metar/${icaoV}`);
         const data = await rawdata.json();
         console.log(data);
         setMetarData(data);
       } catch (error) {
-        console.error('unable to retrieve', error);
+        console.error('unable to retrieve METAR', error);
       }
+      
+
+      try{
+        console.log('starting fetch');
+
+        const dbdata = await fetch(`/db/${icaoV}`).catch(err => {
+          console.error('fetch threw:', err);
+          throw err;
+        });
+        console.log('DB Status: ', dbdata.status);
+        const db = await dbdata.json();
+        console.log('DB RAW:', db);                // ← ADD THIS
+        console.log('DB TYPE:', typeof db, db); 
+        setRwys(db || []);
+      } catch (error){
+        console.error('unable to retrieve db', error);
+      }
+
     };
     fetchdata();  
     }, [icaoV]);
@@ -156,6 +171,9 @@ function App() {
             <div className="bg-light p-3 rounded">
              {JSON.stringify(metarData)}
             </div>  
+         </div>
+         <div>
+             {JSON.stringify(rwys)}   
          </div>        
           
       </section>
