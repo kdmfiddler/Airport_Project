@@ -1,4 +1,5 @@
 const { aptdb } = require('./src/metars.js');
+const { gauntlet } = require('./src/slicer.js');
 
 
 async function fetchdb(icaoV) {
@@ -16,8 +17,9 @@ async function fetchdb(icaoV) {
     const construct = JSON.parse(JSON.stringify(data)) || data;
     if (construct && Object.keys(construct).length > 0) {
         console.log('DB info found pushing to local repository');
-        aptdb.push(construct);
-        return construct;
+        modified = gauntlet(construct);
+        aptdb.push(modified);
+        return modified;
     }
     else {
         console.log('DB Info not retrieved for ' + icaoV);

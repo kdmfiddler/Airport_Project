@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import menuData from './data.js';
 import './App.css';
-import { page_values, aptdb } from './metars.js';
+import { crossdet } from './slicer.js'
 
 
 
@@ -13,37 +13,34 @@ function App() {
   const [userInput, setUserInput] = useState(''); 
   const [icaoV, setIcaoV] = useState('KABC'); 
   const [tempT, setTempT] = useState('F'); 
-  const [rwys, setRwys] = useState([]);
+  const [aptDb, setAptDb] = useState([]);
+  
   
   useEffect(() => {
     const fetchdata = async () => {
       
       try{
+        console.log('starting Metar fetch');
+        
         const rawdata = await fetch(`/metar/${icaoV}`);
         const data = await rawdata.json();
+
         console.log(data);
         setMetarData(data);
+        
+        console.log('starting DB fetch');
+        
+        const dbdata = await fetch(`/db/${icaoV}`);
+        const db = await dbdata.json();
+        setAptDb(db || []);
+        
+        
+        
       } catch (error) {
-        console.error('unable to retrieve METAR', error);
+        console.error('unable to execute useEffect', error);
+        
       }
       
-
-      try{
-        console.log('starting fetch');
-
-        const dbdata = await fetch(`/db/${icaoV}`).catch(err => {
-          console.error('fetch threw:', err);
-          throw err;
-        });
-        console.log('DB Status: ', dbdata.status);
-        const db = await dbdata.json();
-        console.log('DB RAW:', db);                // ← ADD THIS
-        console.log('DB TYPE:', typeof db, db); 
-        setRwys(db || []);
-      } catch (error){
-        console.error('unable to retrieve db', error);
-      }
-
     };
     fetchdata();  
     }, [icaoV]);
@@ -66,11 +63,14 @@ function App() {
     setActiveView('dash');
   };
 
-  if(!metarData){
+  if(!metarData || !aptDb || !aptDb.rwyh){
     return (
       <div>Retrieving</div>
     )
   }
+
+  const crossW = crossdet(metarData.wdir, aptDb.rwyh);
+  console.log('Crosswind found to be: ' + crossW);
 
   return (
     <>
@@ -122,41 +122,7 @@ function App() {
           <div className='location-sign'>
             <h2><b>{metarData.icao}</b></h2>
           </div>
-          <div className='data-grid'>
-
-            <div className='data-box'>TEXT</div>
-            
-            <div className='data-box'>TEXT</div>
-            
-            <div className='data-box' style={{
-              color: 'white',
-              backgroundColor: metarData.ctemp < -17 ? '#0594FA':
-                metarData.ctemp < 1 ? '#56B3F5':
-                metarData.ctemp < 13 ? '#ceba05ff':
-                metarData.ctemp < 21 ? '#F79E0F' : '#F75C0F',
-              
-              }}>
-                {tempT === 'F' ? (
-                  <b>{metarData.ctemp}°C</b>
-                  ) : (
-                  <b>{metarData.ftemp}°F</b>
-                )}
-              <button className='little-round-button' onClick={tempChg}>{tempT}</button>
-                
-            </div>
-            <div className='data-box' style={{color: 'white', backgroundColor:'#524E4E'}}>
-              {tempT === 'F' ? (
-                 <b>Td {metarData.dewp}</b>
-                ) : (
-                 <b>Td {metarData.fdpoint}</b>
-                )}
-
-            
-            </div>
-          </div>
-            
-            
-          
+          <div className='apt-name'style={{textDecoration:'none'}}><a href={aptDb.web}>{aptDb.name}</a></div>
           
           <div className='location-sign' style={{fontSize: '12px', color: 'white', border: '3px solid white'}}>
             <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%'}}>
@@ -164,6 +130,57 @@ function App() {
             <h6 style={{margin: 0}}>{metarData.caotime}</h6></b>
             </div>
           </div>
+        </div>
+        
+        <div className='top-line' style={{height: '30px'}}>
+          <div className='data-grid'>
+
+            <div className='data-box'style={{justifySelf: 'center'}}>Wind</div>
+
+            <div className='data-box' style={{
+              color: 'black', 
+              backgroundColor: crossW ? '#f75c0f88':'#37bc1f82',  
+              }}>
+              <b>{metarData.wdir}</b></div>
+            
+            <div className='data-box' style={{justifySelf: 'center'}}>@</div>
+            
+            <div className='data-box' style={{
+              color: 'black',
+              backgroundColor: metarData.wspd > 17 || metarData.wgst > 25 ? '#ceba0586':
+                metarData.wspd > 40|| metarData.wgst > 35 ? '#f75c0f80': '#37bc1f85',              
+              }}>
+              <b>{metarData.wspd} {metarData.wgst > 0 ? (' G ' + metarData.wgst) : ('')}</b></div>
+            
+            <div className='data-box'style={{justifySelf: 'center'}}>Temp</div>
+            
+            <div className='data-box' style={{
+              color: 'white',
+              backgroundColor: metarData.ctemp < -17 ? '#0594fa7d':
+                metarData.ctemp < 1 ? '#56b3f58b':
+                metarData.ctemp < 13 ? '#ceba0592':
+                metarData.ctemp < 21 ? '#f79e0f89' : '#f75c0f88',
+              }}>
+                {tempT === 'F' ? (
+                  <b>{metarData.ctemp}°C</b>
+                  ) : (
+                  <b>{metarData.ftemp}°F</b>
+                )}
+            </div>
+            
+            <div className='data-box' style={{justifySelf: 'center'}}>
+              <button className='little-round-button' onClick={tempChg}>{tempT}</button>
+                
+            </div>
+ 
+            <div className='data-box' style={{color: 'white', backgroundColor:'#524E4E'}}>
+              {tempT === 'F' ? (
+                 <b>Td {metarData.dewp}</b>
+                ) : (
+                 <b>Td {metarData.fdewp}</b>
+                )}
+            </div>
+          </div>        
 
         </div>
         <div className="container mt-4">
@@ -173,7 +190,7 @@ function App() {
             </div>  
          </div>
          <div>
-             {JSON.stringify(rwys)}   
+             {JSON.stringify(aptDb)}   
          </div>        
           
       </section>
